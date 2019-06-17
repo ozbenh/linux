@@ -3198,7 +3198,6 @@ EXPORT_SYMBOL_GPL(pci_create_root_bus);
 
 int pci_host_probe(struct pci_host_bridge *bridge)
 {
-	struct pci_bus *bus, *child;
 	int ret;
 
 	ret = pci_scan_root_bus_bridge(bridge);
@@ -3207,24 +3206,12 @@ int pci_host_probe(struct pci_host_bridge *bridge)
 		return ret;
 	}
 
-	bus = bridge->bus;
+	/* Setup resources according to platform default policy */
+	pci_host_resource_survey(bridge->bus, pci_rsrc_default);
 
-	/*
-	 * We insert PCI resources into the iomem_resource and
-	 * ioport_resource trees in either pci_bus_claim_resources()
-	 * or pci_bus_assign_resources().
-	 */
-	if (pci_has_flag(PCI_PROBE_ONLY)) {
-		pci_bus_claim_resources(bus);
-	} else {
-		pci_bus_size_bridges(bus);
-		pci_bus_assign_resources(bus);
+	/* Register PCI devices with the device model */
+	pci_bus_add_devices(bridge->bus);
 
-		list_for_each_entry(child, &bus->children, node)
-			pcie_bus_configure_settings(child);
-	}
-
-	pci_bus_add_devices(bus);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(pci_host_probe);
