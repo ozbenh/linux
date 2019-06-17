@@ -549,23 +549,13 @@ void pci_common_init_dev(struct device *parent, struct hw_pci *hw)
 
 	list_for_each_entry(sys, &head, node) {
 		struct pci_bus *bus = sys->bus;
+		struct pci_bus *child;
 
-		/*
-		 * We insert PCI resources into the iomem_resource and
-		 * ioport_resource trees in either pci_bus_claim_resources()
-		 * or pci_bus_assign_resources().
-		 */
-		if (pci_has_flag(PCI_PROBE_ONLY)) {
-			pci_bus_claim_resources(bus);
-		} else {
-			struct pci_bus *child;
+		pci_bus_size_bridges(bus);
+		pci_bus_assign_resources(bus);
 
-			pci_bus_size_bridges(bus);
-			pci_bus_assign_resources(bus);
-
-			list_for_each_entry(child, &bus->children, node)
-				pcie_bus_configure_settings(child);
-		}
+		list_for_each_entry(child, &bus->children, node)
+			pcie_bus_configure_settings(child);
 
 		pci_bus_add_devices(bus);
 	}
