@@ -492,13 +492,14 @@ static int bridge_probe(struct platform_device *pdev)
 	if (!domain)
 		return -ENOMEM;
 
-	pci_set_flags(PCI_PROBE_ONLY);
-
 	host = devm_pci_alloc_host_bridge(dev, sizeof(*bc));
 	if (!host) {
 		err = -ENOMEM;
 		goto err_remove_domain;
 	}
+
+	/* Use an explicit resource policy for xtalk bridges */
+	host->rsrc_policy = pci_rsrc_claim_only;
 
 	bc = pci_host_bridge_priv(host);
 
@@ -571,7 +572,7 @@ static int bridge_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto err_free_resource;
 
-	pci_bus_claim_resources(host->bus);
+	pci_host_resource_survey(host->bus);
 	pci_bus_add_devices(host->bus);
 
 	platform_set_drvdata(pdev, host->bus);
