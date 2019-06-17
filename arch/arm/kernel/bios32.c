@@ -548,16 +548,8 @@ void pci_common_init_dev(struct device *parent, struct hw_pci *hw)
 		hw->postinit();
 
 	list_for_each_entry(sys, &head, node) {
-		struct pci_bus *bus = sys->bus;
-		struct pci_bus *child;
-
-		pci_bus_size_bridges(bus);
-		pci_bus_assign_resources(bus);
-
-		list_for_each_entry(child, &bus->children, node)
-			pcie_bus_configure_settings(child);
-
-		pci_bus_add_devices(bus);
+		pci_host_resource_survey(sys->bus, pci_rsrc_default);
+		pci_bus_add_devices(sys->bus);
 	}
 }
 
