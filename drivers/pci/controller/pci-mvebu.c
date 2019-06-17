@@ -1010,7 +1010,6 @@ static int mvebu_pcie_parse_request_resources(struct mvebu_pcie *pcie)
 static int mvebu_pci_host_probe(struct pci_host_bridge *bridge)
 {
 	struct mvebu_pcie *pcie;
-	struct pci_bus *bus, *child;
 	int ret;
 
 	ret = pci_scan_root_bus_bridge(bridge);
@@ -1027,24 +1026,10 @@ static int mvebu_pci_host_probe(struct pci_host_bridge *bridge)
 			pci_ioremap_io(i, pcie->io.start + i);
 	}
 
-	bus = bridge->bus;
+	/* Setup resources according to platform default policy */
+	pci_host_resource_survey(bridge->bus, pci_rsrc_default);
 
-	/*
-	 * We insert PCI resources into the iomem_resource and
-	 * ioport_resource trees in either pci_bus_claim_resources()
-	 * or pci_bus_assign_resources().
-	 */
-	if (pci_has_flag(PCI_PROBE_ONLY)) {
-		pci_bus_claim_resources(bus);
-	} else {
-		pci_bus_size_bridges(bus);
-		pci_bus_assign_resources(bus);
-
-		list_for_each_entry(child, &bus->children, node)
-			pcie_bus_configure_settings(child);
-	}
-
-	pci_bus_add_devices(bus);
+	pci_bus_add_devices(bridge->bus);
 	return 0;
 }
 
