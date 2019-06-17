@@ -18,11 +18,6 @@
 #include <asm/cpu-info.h>
 
 /*
- * If PCI_PROBE_ONLY in pci_flags is set, we don't change any PCI resource
- * assignments.
- */
-
-/*
  * The PCI controller list.
  */
 static LIST_HEAD(controllers);
@@ -116,21 +111,8 @@ static void pcibios_scanbus(struct pci_controller *hose)
 		need_domain_info = 1;
 	}
 
-	/*
-	 * We insert PCI resources into the iomem_resource and
-	 * ioport_resource trees in either pci_bus_claim_resources()
-	 * or pci_bus_assign_resources().
-	 */
-	if (pci_has_flag(PCI_PROBE_ONLY)) {
-		pci_bus_claim_resources(bus);
-	} else {
-		struct pci_bus *child;
-
-		pci_bus_size_bridges(bus);
-		pci_bus_assign_resources(bus);
-		list_for_each_entry(child, &bus->children, node)
-			pcie_bus_configure_settings(child);
-	}
+	/* Setup PCI resources according to default policy */
+	pci_host_resource_survey(bus, pci_rsrc_default);
 	pci_bus_add_devices(bus);
 }
 
@@ -232,6 +214,9 @@ out:
 static int __init pcibios_init(void)
 {
 	struct pci_controller *hose;
+
+	/* Default resource policy: Reassign all */
+	pci_add_flags(PCI_REASSIGN_ALL_RSRC);
 
 	/* Scan all of the recorded PCI controllers.  */
 	list_for_each_entry(hose, &controllers, list)

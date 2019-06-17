@@ -571,7 +571,7 @@ static int bridge_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto err_free_resource;
 
-	pci_bus_claim_resources(host->bus);
+	pci_host_resource_survey(host->bus, pci_rsrc_claim_only);
 	pci_bus_add_devices(host->bus);
 
 	platform_set_drvdata(pdev, host->bus);
