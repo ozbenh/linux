@@ -169,6 +169,7 @@ struct pci_bus *pci_acpi_scan_root(struct acpi_pci_root *root)
 	struct pci_bus *bus, *child;
 	struct acpi_pci_root_ops *root_ops;
 	struct pci_host_bridge *hb;
+	enum pci_rsrc_policy policy;
 
 	ri = kzalloc(sizeof(*ri), GFP_KERNEL);
 	if (!ri)
@@ -194,20 +195,18 @@ struct pci_bus *pci_acpi_scan_root(struct acpi_pci_root *root)
 	if (!bus)
 		return NULL;
 
-	hb = pci_find_host_bridge(bus);
-
-	/* If ACPI tells us to preserve the resource configuration, claim now */
-	if (hb->preserve_config)
-		pci_bus_claim_resources(bus);
-
 	/*
-	 * Assign whatever was left unassigned. If we didn't claim above, this will
-	 * reassign everything.
+	 * For now, we use a pci_rsrc_assign_only policy by default unless
+	 * ACPI requires us to preserve existing resources. This will
+	 * eventually change to pci_rsrc_claim_assign when some platforms
+	 * issues have been solved and the generic claim code made smarter.
 	 */
-	pci_assign_unassigned_root_bus_resources(bus);
-
-	list_for_each_entry(child, &bus->children, node)
-		pcie_bus_configure_settings(child);
+	hb = pci_find_host_bridge(bus);
+	if (hb->preserve_config)
+		policy = pci_rsrc_claim_assign;
+	else
+		policy = pci_rsrc_assign_only;
+	pci_host_resource_survey(bus, policy);
 
 	return bus;
 }
