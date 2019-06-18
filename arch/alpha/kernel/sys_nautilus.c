@@ -235,14 +235,11 @@ nautilus_init_pci(void)
 	}
 
 	bus = hose->bus = bridge->bus;
-	pcibios_claim_one_bus(bus);
 
 	irongate = pci_get_domain_bus_and_slot(pci_domain_nr(bus), 0, 0);
 	bus->self = irongate;
 	bus->resource[0] = &irongate_io;
 	bus->resource[1] = &irongate_mem;
-
-	pci_bus_size_bridges(bus);
 
 	/* IO port range. */
 	bus->resource[0]->start = 0;
@@ -274,7 +271,7 @@ nautilus_init_pci(void)
 	if ((IRONGATE0->dev_vendor >> 16) > 0x7006)	/* Albacore? */
 		IRONGATE0->pci_mem = pci_mem;
 
-	pci_bus_assign_resources(bus);
+	pci_host_resource_survey(bus, pci_rsrc_assign_only);
 
 	/* pci_common_swizzle() relies on bus->self being NULL
 	   for the root bus, so just clear it. */
