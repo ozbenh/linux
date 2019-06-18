@@ -82,8 +82,7 @@ static void pcibios_scanbus(struct pci_channel *hose)
 		need_domain_info = 1;
 	}
 
-	pci_bus_size_bridges(hose->bus);
-	pci_bus_assign_resources(hose->bus);
+	pci_host_resource_survey(hose->bus, pci_rsrc_assign_only);
 	pci_bus_add_devices(hose->bus);
 }
 
