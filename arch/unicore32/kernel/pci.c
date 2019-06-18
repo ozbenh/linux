@@ -292,8 +292,7 @@ static int __init pci_common_init(void)
 	if (!puv3_bus)
 		panic("PCI: unable to scan bus!");
 
-	pci_bus_size_bridges(puv3_bus);
-	pci_bus_assign_resources(puv3_bus);
+	pci_host_resource_survey(puv3_bus, pci_rsrc_assign_only);
 	pci_bus_add_devices(puv3_bus);
 	return 0;
 }
