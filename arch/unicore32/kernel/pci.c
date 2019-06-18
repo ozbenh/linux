@@ -275,6 +275,7 @@ static int __init pci_common_init(void)
 	bridge->ops = &pci_puv3_ops;
 	bridge->swizzle_irq = pci_common_swizzle;
 	bridge->map_irq = pci_puv3_map_irq;
+	bridge->rsrc_policy = pci_rsrc_assign_only;
 
 	/* Scan our single hose.  */
 	ret = pci_scan_root_bus_bridge(bridge);
@@ -288,8 +289,7 @@ static int __init pci_common_init(void)
 	if (!puv3_bus)
 		panic("PCI: unable to scan bus!");
 
-	pci_bus_size_bridges(puv3_bus);
-	pci_bus_assign_resources(puv3_bus);
+	pci_host_resource_survey(puv3_bus);
 	pci_bus_add_devices(puv3_bus);
 	return 0;
 }
