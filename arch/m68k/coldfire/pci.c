@@ -236,6 +236,7 @@ static int __init mcf_pci_init(void)
 	bridge->ops = &mcf_pci_ops;
 	bridge->swizzle_irq = pci_common_swizzle;
 	bridge->map_irq = mcf_pci_map_irq;
+	bridge->rsrc_policy = pci_rsrc_assign_only;
 
 	ret = pci_scan_root_bus_bridge(bridge);
 	if (ret) {
@@ -248,8 +249,7 @@ static int __init mcf_pci_init(void)
 	rootbus->resource[0] = &mcf_pci_io;
 	rootbus->resource[1] = &mcf_pci_mem;
 
-	pci_bus_size_bridges(rootbus);
-	pci_bus_assign_resources(rootbus);
+	pci_host_resource_survey(rootbus);
 	pci_bus_add_devices(rootbus);
 	return 0;
 }
