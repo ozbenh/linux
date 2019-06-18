@@ -555,39 +555,7 @@ dino_fixup_bus(struct pci_bus *bus)
 	/* Firmware doesn't set up card-mode dino, so we have to */
 	if (is_card_dino(&dino_dev->hba.dev->id)) {
 		dino_card_setup(bus, dino_dev->hba.base_addr);
-	} else if (bus->parent) {
-		int i;
-
-		pci_read_bridge_bases(bus);
-
-
-		for(i = PCI_BRIDGE_RESOURCES; i < PCI_NUM_RESOURCES; i++) {
-			if((bus->self->resource[i].flags & 
-			    (IORESOURCE_IO | IORESOURCE_MEM)) == 0)
-				continue;
-			
-			if(bus->self->resource[i].flags & IORESOURCE_MEM) {
-				/* There's a quirk to alignment of
-				 * bridge memory resources: the start
-				 * is the alignment and start-end is
-				 * the size.  However, firmware will
-				 * have assigned start and end, so we
-				 * need to take this into account */
-				bus->self->resource[i].end = bus->self->resource[i].end - bus->self->resource[i].start + DINO_BRIDGE_ALIGN;
-				bus->self->resource[i].start = DINO_BRIDGE_ALIGN;
-				
-			}
-					
-			DBG("DEBUG %s assigning %d [%pR]\n",
-			    dev_name(&bus->self->dev), i,
-			    &bus->self->resource[i]);
-			WARN_ON(pci_assign_resource(bus->self, i));
-			DBG("DEBUG %s after assign %d [%pR]\n",
-			    dev_name(&bus->self->dev), i,
-			    &bus->self->resource[i]);
-		}
 	}
-
 
 	list_for_each_entry(dev, &bus->devices, bus_list) {
 		if (is_card_dino(&dino_dev->hba.dev->id))
@@ -1003,7 +971,7 @@ static int __init dino_probe(struct parisc_device *dev)
 	 * if it isn't, this global bus number count will fail
 	 */
 	dino_current_bus = max + 1;
-	pci_bus_assign_resources(bus);
+	pci_host_resource_survey(bus, pci_rsrc_assign_only);
 	pci_bus_add_devices(bus);
 	return 0;
 }
