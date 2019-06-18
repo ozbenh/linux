@@ -81,10 +81,12 @@ int __ref cb_alloc(struct pcmcia_socket *s)
 			max = pci_scan_bridge(bus, dev, max, pass);
 
 	/*
-	 * Size all resources below the CardBus controller.
+	 * Size all resources below the CardBus controller. We call
+	 * pci_host_resource_survey(). It's meant to be for host bridges
+	 * but when called with pci_rsrc_assign_only, but it will work
+	 * for us just fine.
 	 */
-	pci_bus_size_bridges(bus);
-	pci_bus_assign_resources(bus);
+	pci_host_resource_survey(bus, pci_rsrc_assign_only)
 	cardbus_config_irq_and_cls(bus, s->pci_irq);
 
 	/* socket specific tune function */
