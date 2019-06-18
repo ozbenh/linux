@@ -664,41 +664,6 @@ extend_lmmio_len(unsigned long start, unsigned long end, unsigned long lba_len)
 #define truncate_pat_collision(r,n)  (0)
 #endif
 
-static void pcibios_allocate_bridge_resources(struct pci_dev *dev)
-{
-	int idx;
-	struct resource *r;
-
-	for (idx = PCI_BRIDGE_RESOURCES; idx < PCI_NUM_RESOURCES; idx++) {
-		r = &dev->resource[idx];
-		if (!r->flags)
-			continue;
-		if (r->parent)	/* Already allocated */
-			continue;
-		if (!r->start || pci_claim_bridge_resource(dev, idx) < 0) {
-			/*
-			 * Something is wrong with the region.
-			 * Invalidate the resource to prevent
-			 * child resource allocations in this
-			 * range.
-			 */
-			r->start = r->end = 0;
-			r->flags = 0;
-		}
-	}
-}
-
-static void pcibios_allocate_bus_resources(struct pci_bus *bus)
-{
-	struct pci_bus *child;
-
-	/* Depth-First Search on bus tree */
-	if (bus->self)
-		pcibios_allocate_bridge_resources(bus->self);
-	list_for_each_entry(child, &bus->children, node)
-		pcibios_allocate_bus_resources(child);
-}
-
 
 /*
 ** The algorithm is generic code.
@@ -725,13 +690,7 @@ lba_fixup_bus(struct pci_bus *bus)
 	** Properly Setup MMIO resources for this bus.
 	** pci_alloc_primary_bus() mangles this.
 	*/
-	if (bus->parent) {
-		/* PCI-PCI Bridge */
-		pci_read_bridge_bases(bus);
-
-		/* check and allocate bridge resources */
-		pcibios_allocate_bus_resources(bus);
-	} else {
+	if (!bus->parent) {
 		/* Host-PCI Bridge */
 		int err;
 
@@ -744,6 +703,10 @@ lba_fixup_bus(struct pci_bus *bus)
 			ldev->hba.lmmio_space.start, ldev->hba.lmmio_space.end,
 			ldev->hba.lmmio_space.flags);
 
+		/*
+		 * This should probably be done elsewhere, such as in
+		 * lba_driver_probe()...
+		 */
 		err = request_resource(&ioport_resource, &(ldev->hba.io_space));
 		if (err < 0) {
 			lba_dump_res(&ioport_resource, 2);
@@ -793,25 +756,7 @@ lba_fixup_bus(struct pci_bus *bus)
 	}
 
 	list_for_each_entry(dev, &bus->devices, bus_list) {
-		int i;
-
 		DBG("lba_fixup_bus() %s\n", pci_name(dev));
-
-		/* Virtualize Device/Bridge Resources. */
-		for (i = 0; i < PCI_BRIDGE_RESOURCES; i++) {
-			struct resource *res = &dev->resource[i];
-
-			/* If resource not allocated - skip it */
-			if (!res->start)
-				continue;
-
-			/*
-			** FIXME: this will result in whinging for devices
-			** that share expansion ROMs (think quad tulip), but
-			** isn't harmful.
-			*/
-			pci_claim_resource(dev, i);
-		}
 
 #ifdef FBB_SUPPORT
 		/*
@@ -1469,6 +1414,7 @@ static unsigned int lba_next_bus = 0;
 static int __init
 lba_driver_probe(struct parisc_device *dev)
 {
+	enum pci_rsrc_policy rsrc_policy;
 	struct lba_device *lba_dev;
 	LIST_HEAD(resources);
 	struct pci_bus *lba_bus;
@@ -1630,23 +1576,31 @@ lba_driver_probe(struct parisc_device *dev)
 
 	max = pci_scan_child_bus(lba_bus);
 
-	/* This is in lieu of calling pci_assign_unassigned_resources() */
-	if (is_pdc_pat()) {
-		/* assign resources to un-initialized devices */
-
-		DBG_PAT("LBA pci_bus_size_bridges()\n");
-		pci_bus_size_bridges(lba_bus);
-
-		DBG_PAT("LBA pci_bus_assign_resources()\n");
-		pci_bus_assign_resources(lba_bus);
+	/*
+	 * The previous code would claim bus and device resources from
+	 * pcibios_fixup_bus(). I've removed that code, in favor of
+	 * doing things here via the generic pci_host_resource_survey().
+	 *
+	 * For some reason, the code would only assign unassigned devices
+	 * if is_pdc_pat() returned true. We follow that same logic.
+	 */
+	if (is_pdc_pat())
+		rsrc_policy = pci_rsrc_claim_assign;
+	else
+		rsrc_policy = pci_rsrc_claim_only;
+	pci_host_resource_survey(lba_bus, rsrc_policy);
 
 #ifdef DEBUG_LBA_PAT
-		DBG_PAT("\nLBA PIOP resource tree\n");
-		lba_dump_res(&lba_dev->hba.io_space, 2);
-		DBG_PAT("\nLBA LMMIO resource tree\n");
-		lba_dump_res(&lba_dev->hba.lmmio_space, 2);
+	/*
+	 * This debug code used to be only in is_pdc_pat(), but with the
+	 * changes to use generic code, making it unconditional might help
+	 * diagnose issues
+	 */
+	DBG_PAT("\nLBA PIOP resource tree\n");
+	lba_dump_res(&lba_dev->hba.io_space, 2);
+	DBG_PAT("\nLBA LMMIO resource tree\n");
+	lba_dump_res(&lba_dev->hba.lmmio_space, 2);
 #endif
-	}
 
 	/*
 	** Once PCI register ops has walked the bus, access to config
