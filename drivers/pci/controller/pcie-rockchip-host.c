@@ -948,7 +948,6 @@ static int rockchip_pcie_probe(struct platform_device *pdev)
 {
 	struct rockchip_pcie *rockchip;
 	struct device *dev = &pdev->dev;
-	struct pci_bus *bus, *child;
 	struct pci_host_bridge *bridge;
 	struct resource_entry *win;
 	resource_size_t io_base;
@@ -1056,16 +1055,9 @@ static int rockchip_pcie_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto err_unmap_iospace;
 
-	bus = bridge->bus;
-
-	rockchip->root_bus = bus;
-
-	pci_bus_size_bridges(bus);
-	pci_bus_assign_resources(bus);
-	list_for_each_entry(child, &bus->children, node)
-		pcie_bus_configure_settings(child);
-
-	pci_bus_add_devices(bus);
+	rockchip->root_bus = bridge->bus;
+	pci_host_resource_survey(bridge->bus, pci_rsrc_default);
+	pci_bus_add_devices(bridge->bus);
 	return 0;
 
 err_unmap_iospace:
