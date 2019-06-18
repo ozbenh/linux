@@ -62,6 +62,7 @@ static void pcibios_scanbus(struct pci_channel *hose)
 	bridge->ops = hose->pci_ops;
 	bridge->swizzle_irq = pci_common_swizzle;
 	bridge->map_irq = pcibios_map_platform_irq;
+	bridge->rsrc_policy = pci_rsrc_assign_only;
 
 	ret = pci_scan_root_bus_bridge(bridge);
 	if (ret) {
@@ -82,8 +83,7 @@ static void pcibios_scanbus(struct pci_channel *hose)
 		need_domain_info = 1;
 	}
 
-	pci_bus_size_bridges(hose->bus);
-	pci_bus_assign_resources(hose->bus);
+	pci_host_resource_survey(hose->bus);
 	pci_bus_add_devices(hose->bus);
 }
 
