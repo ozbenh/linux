@@ -455,7 +455,6 @@ static int rcar_pcie_enable(struct rcar_pcie *pcie)
 {
 	struct device *dev = pcie->dev;
 	struct pci_host_bridge *bridge = pci_host_bridge_from_priv(pcie);
-	struct pci_bus *bus, *child;
 	int ret;
 
 	/* Try setting 5 GT/s link speed */
@@ -478,15 +477,8 @@ static int rcar_pcie_enable(struct rcar_pcie *pcie)
 	if (ret < 0)
 		return ret;
 
-	bus = bridge->bus;
-
-	pci_bus_size_bridges(bus);
-	pci_bus_assign_resources(bus);
-
-	list_for_each_entry(child, &bus->children, node)
-		pcie_bus_configure_settings(child);
-
-	pci_bus_add_devices(bus);
+	pci_host_resource_survey(bridge->bus, pci_rsrc_default);
+	pci_bus_add_devices(bridge->bus);
 
 	return 0;
 }
