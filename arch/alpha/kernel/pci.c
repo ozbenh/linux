@@ -253,12 +253,7 @@ pci_restore_srm_config(void)
 
 void pcibios_fixup_bus(struct pci_bus *bus)
 {
-	struct pci_dev *dev = bus->self;
-
-	if (pci_has_flag(PCI_PROBE_ONLY) && dev &&
-	    (dev->class >> 8) == PCI_CLASS_BRIDGE_PCI) {
-		pci_read_bridge_bases(bus);
-	}
+	struct pci_dev *dev;
 
 	list_for_each_entry(dev, &bus->devices, bus_list) {
 		pdev_save_srm_config(dev);
@@ -282,45 +277,9 @@ pcibios_set_master(struct pci_dev *dev)
 }
 
 void __init
-pcibios_claim_one_bus(struct pci_bus *b)
-{
-	struct pci_dev *dev;
-	struct pci_bus *child_bus;
-
-	list_for_each_entry(dev, &b->devices, bus_list) {
-		int i;
-
-		for (i = 0; i < PCI_NUM_RESOURCES; i++) {
-			struct resource *r = &dev->resource[i];
-
-			if (r->parent || !r->start || !r->flags)
-				continue;
-			if (pci_has_flag(PCI_PROBE_ONLY) ||
-			    (r->flags & IORESOURCE_PCI_FIXED)) {
-				if (pci_claim_resource(dev, i) == 0)
-					continue;
-
-				pci_claim_bridge_resource(dev, i);
-			}
-		}
-	}
-
-	list_for_each_entry(child_bus, &b->children, node)
-		pcibios_claim_one_bus(child_bus);
-}
-
-static void __init
-pcibios_claim_console_setup(void)
-{
-	struct pci_bus *b;
-
-	list_for_each_entry(b, &pci_root_buses, node)
-		pcibios_claim_one_bus(b);
-}
-
-void __init
 common_init_pci(void)
 {
+	enum pci_rsrc_policy rsrc_policy;
 	struct pci_controller *hose;
 	struct list_head resources;
 	struct pci_host_bridge *bridge;
@@ -330,6 +289,22 @@ common_init_pci(void)
 	u32 pci_mem_end;
 	u32 sg_base;
 	unsigned long end;
+
+	/*
+	 * Resource policy depends on PCI_PROBE_ONLY. Note that alpha
+	 * seems to give this a different meaning that most other archs.
+	 *
+	 * On most archs, it means to claim the existing FW setup, and
+	 * not assign what's left unassigned nor attempt to realloc.
+	 *
+	 * However, alpha used to call pci_assign_unassigned_resources()
+	 * unconditionally, so we'll set the policy here accordingly,
+	 * overriding the default one set by pci_alloc_host_bridge
+	 */
+	if (pci_has_flag(PCI_PROBE_ONLY))
+		rsrc_policy = pci_rsrc_claim_assign;
+	else
+		rsrc_policy = pci_rsrc_assign_only;
 
 	/* Scan all of the recorded PCI controllers.  */
 	for (next_busno = 0, hose = hose_head; hose; hose = hose->next) {
@@ -359,6 +334,7 @@ common_init_pci(void)
 		bridge->ops = alpha_mv.pci_ops;
 		bridge->swizzle_irq = alpha_mv.pci_swizzle;
 		bridge->map_irq = alpha_mv.pci_map_irq;
+		bridge->rsrc_policy = rsrc_policy;
 
 		ret = pci_scan_root_bus_bridge(bridge);
 		if (ret) {
@@ -375,11 +351,10 @@ common_init_pci(void)
 			next_busno = 0;
 			need_domain_info = 1;
 		}
+
+	        pci_host_resource_survey(bus);
 	}
 
-	pcibios_claim_console_setup();
-
-	pci_assign_unassigned_resources();
 	for (hose = hose_head; hose; hose = hose->next) {
 		bus = hose->bus;
 		if (bus)
@@ -470,6 +445,11 @@ void pci_iounmap(struct pci_dev *dev, void __iomem * addr)
 }
 
 EXPORT_SYMBOL(pci_iounmap);
+
+bool pcibios_claim_zero_resource(struct pci_dev *dev, int rsrc_idx)
+{
+	return false;
+}
 
 /* FIXME: Some boxes have multiple ISA bridges! */
 struct pci_dev *isa_bridge;
