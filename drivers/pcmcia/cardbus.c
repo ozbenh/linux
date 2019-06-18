@@ -77,11 +77,8 @@ int __ref cb_alloc(struct pcmcia_socket *s)
 		for_each_pci_bridge(dev, bus)
 			max = pci_scan_bridge(bus, dev, max, pass);
 
-	/*
-	 * Size all resources below the CardBus controller.
-	 */
-	pci_bus_size_bridges(bus);
-	pci_bus_assign_resources(bus);
+	/* Size and assign all resources below the CardBus controller */
+	pci_assign_unassigned_bridge_resources(s->cb_dev);
 	cardbus_config_irq_and_cls(bus, s->pci_irq);
 
 	/* socket specific tune function */
