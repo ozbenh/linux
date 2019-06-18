@@ -1291,12 +1291,6 @@ void __pci_bus_size_bridges(struct pci_bus *bus, struct list_head *realloc_head)
 	}
 }
 
-void pci_bus_size_bridges(struct pci_bus *bus)
-{
-	__pci_bus_size_bridges(bus, NULL);
-}
-EXPORT_SYMBOL(pci_bus_size_bridges);
-
 static void assign_fixed_resource_on_bus(struct pci_bus *b, struct resource *r)
 {
 	int i;
@@ -2200,7 +2194,7 @@ void pci_host_resource_survey(struct pci_bus *bus, enum pci_rsrc_policy policy)
 	 * warning and messages if things go wrong
 	 */
 	if (policy == pci_rsrc_assign_only) {
-		pci_bus_size_bridges(bus);
+		__pci_bus_size_bridges(bus, NULL);
 		pci_bus_assign_resources(bus);
 	} else if (policy == pci_rsrc_claim_assign)
 		pci_assign_unassigned_root_bus_resources(bus);

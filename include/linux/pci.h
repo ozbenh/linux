@@ -1268,7 +1268,6 @@ int pci_set_vpd_size(struct pci_dev *dev, size_t len);
 /* Helper functions for low-level code (drivers/pci/setup-[bus,res].c) */
 resource_size_t pcibios_retrieve_fw_addr(struct pci_dev *dev, int idx);
 void pci_bus_assign_resources(const struct pci_bus *bus);
-void pci_bus_size_bridges(struct pci_bus *bus);
 /* Architecture can override this (weak) */
 bool pcibios_claim_zero_resource(struct pci_dev *dev, int rsrc_idx,
 				 enum pci_rsrc_policy policy);
