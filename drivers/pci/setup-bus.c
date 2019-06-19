@@ -1453,13 +1453,6 @@ static void pci_bus_allocate_resources(struct pci_bus *b, enum pci_rsrc_policy p
 		pci_bus_allocate_resources(child, policy);
 }
 
-void pci_bus_claim_resources(struct pci_bus *b)
-{
-	pci_bus_allocate_resources(b, pci_rsrc_claim_only);
-	pci_bus_allocate_dev_resources(b, pci_rsrc_claim_only);
-}
-EXPORT_SYMBOL(pci_bus_claim_resources);
-
 static void __pci_bridge_assign_resources(const struct pci_dev *bridge,
 					  struct list_head *add_head,
 					  struct list_head *fail_head)
