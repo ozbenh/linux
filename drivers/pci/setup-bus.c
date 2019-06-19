@@ -1380,7 +1380,16 @@ void pci_bus_assign_resources(const struct pci_bus *bus)
 }
 EXPORT_SYMBOL(pci_bus_assign_resources);
 
-static void pci_claim_device_resources(struct pci_dev *dev)
+/* Should we claim a resource whose r->start is 0 ? */
+bool __weak pcibios_claim_zero_resource(struct pci_dev *dev, int rsrc_idx,
+					enum pci_rsrc_policy policy)
+{
+	/* By default, we claim it if we are doing a probe only pass */
+	return policy == pci_rsrc_claim_only;
+}
+
+static void pci_claim_device_resources(struct pci_dev *dev,
+				       enum pci_rsrc_policy policy)
 {
 	int i;
 
@@ -1389,12 +1398,14 @@ static void pci_claim_device_resources(struct pci_dev *dev)
 
 		if (!r->flags || r->parent)
 			continue;
+		if (!r->start && !pcibios_claim_zero_resource(dev, i, policy))
+			continue;
 
 		pci_claim_resource(dev, i);
 	}
 }
 
-static void pci_claim_bridge_resources(struct pci_dev *dev)
+static void pci_claim_bridge_resources(struct pci_dev *dev, enum pci_rsrc_policy policy)
 {
 	int i;
 
@@ -1403,26 +1414,28 @@ static void pci_claim_bridge_resources(struct pci_dev *dev)
 
 		if (!r->flags || r->parent)
 			continue;
+		if (!r->start && !pcibios_claim_zero_resource(dev, i, policy))
+			continue;
 
 		pci_claim_bridge_resource(dev, i);
 	}
 }
 
-static void pci_bus_allocate_dev_resources(struct pci_bus *b)
+static void pci_bus_allocate_dev_resources(struct pci_bus *b, enum pci_rsrc_policy policy)
 {
 	struct pci_dev *dev;
 	struct pci_bus *child;
 
 	list_for_each_entry(dev, &b->devices, bus_list) {
-		pci_claim_device_resources(dev);
+		pci_claim_device_resources(dev, policy);
 
 		child = dev->subordinate;
 		if (child)
-			pci_bus_allocate_dev_resources(child);
+			pci_bus_allocate_dev_resources(child, policy);
 	}
 }
 
-static void pci_bus_allocate_resources(struct pci_bus *b)
+static void pci_bus_allocate_resources(struct pci_bus *b, enum pci_rsrc_policy policy)
 {
 	struct pci_bus *child;
 
@@ -1433,17 +1446,17 @@ static void pci_bus_allocate_resources(struct pci_bus *b)
 	 */
 	if (b->self) {
 		pci_read_bridge_bases(b);
-		pci_claim_bridge_resources(b->self);
+		pci_claim_bridge_resources(b->self, policy);
 	}
 
 	list_for_each_entry(child, &b->children, node)
-		pci_bus_allocate_resources(child);
+		pci_bus_allocate_resources(child, policy);
 }
 
 void pci_bus_claim_resources(struct pci_bus *b)
 {
-	pci_bus_allocate_resources(b);
-	pci_bus_allocate_dev_resources(b);
+	pci_bus_allocate_resources(b, pci_rsrc_claim_only);
+	pci_bus_allocate_dev_resources(b, pci_rsrc_claim_only);
 }
 EXPORT_SYMBOL(pci_bus_claim_resources);
 
@@ -2183,8 +2196,10 @@ void pci_host_resource_survey(struct pci_bus *bus, enum pci_rsrc_policy policy)
 	}
 
 	/* Claim existing resources if required */
-	if (policy < pci_rsrc_assign_only)
-		pci_bus_claim_resources(bus);
+	if (policy < pci_rsrc_assign_only) {
+		pci_bus_allocate_resources(bus, policy);
+		pci_bus_allocate_dev_resources(bus, policy);
+	}
 
 	/*
 	 * If we do a full reassignment, directly call these as to avoid
