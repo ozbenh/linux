@@ -1380,6 +1380,15 @@ void pci_bus_assign_resources(const struct pci_bus *bus)
 }
 EXPORT_SYMBOL(pci_bus_assign_resources);
 
+/* Should we claim a resource whose r->start is 0 ? */
+bool __weak pcibios_claim_zero_resource(struct pci_dev *dev, int rsrc_idx)
+{
+	struct pci_host_bridge *host = pci_find_host_bridge(dev->bus);
+
+	/* By default, we claim it if we are doing a probe only pass */
+	return host->rsrc_policy == pci_rsrc_claim_only;
+}
+
 static void pci_claim_device_resources(struct pci_dev *dev)
 {
 	int i;
@@ -1388,6 +1397,8 @@ static void pci_claim_device_resources(struct pci_dev *dev)
 		struct resource *r = &dev->resource[i];
 
 		if (!r->flags || r->parent)
+			continue;
+		if (!r->start && !pcibios_claim_zero_resource(dev, i))
 			continue;
 
 		pci_claim_resource(dev, i);
@@ -1402,6 +1413,8 @@ static void pci_claim_bridge_resources(struct pci_dev *dev)
 		struct resource *r = &dev->resource[i];
 
 		if (!r->flags || r->parent)
+			continue;
+		if (!r->start && !pcibios_claim_zero_resource(dev, i))
 			continue;
 
 		pci_claim_bridge_resource(dev, i);
