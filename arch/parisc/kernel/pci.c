@@ -276,4 +276,10 @@ void pcibios_register_hba(struct pci_hba_data *hba)
 	hba->hba_num = pci_hba_count++;
 }
 
+bool pcibios_claim_zero_resource(struct pci_dev *dev, int rsrc_idx,
+				 enum pci_rsrc_policy policy)
+{
+	return false;
+}
+
 subsys_initcall(pcibios_init);
