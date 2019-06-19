@@ -1382,21 +1382,53 @@ bool __weak pcibios_claim_zero_resource(struct pci_dev *dev, int rsrc_idx,
 	return policy == pci_rsrc_claim_only;
 }
 
-static void pci_claim_device_resources(struct pci_dev *dev,
+static void pci_claim_device_resources(struct pci_dev *dev, int pass,
 				       enum pci_rsrc_policy policy)
 {
-	int i;
+	int idx, disabled, i;
+	u16 command;
+	struct resource *r;
 
-	for (i = 0; i < PCI_BRIDGE_RESOURCES; i++) {
-		struct resource *r = &dev->resource[i];
+	struct {
+		int start;
+		int end;
+	} idx_range[] = {
+		{ PCI_STD_RESOURCES, PCI_ROM_RESOURCE },
+#ifdef CONFIG_PCI_IOV
+		{ PCI_IOV_RESOURCES, PCI_IOV_RESOURCE_END },
+#endif
+	};
 
-		if (!r->flags || r->parent)
-			continue;
-		if (!r->start && !pcibios_claim_zero_resource(dev, i, policy))
-			continue;
-
-		pci_claim_resource(dev, i);
-	}
+	pci_read_config_word(dev, PCI_COMMAND, &command);
+	for (i = 0; i < ARRAY_SIZE(idx_range); i++)
+		for (idx = idx_range[i].start; idx <= idx_range[i].end; idx++) {
+			r = &dev->resource[idx];
+			if (!r->flags || r->parent || (r->flags & IORESOURCE_UNSET))
+				continue;
+			if (!r->start && !pcibios_claim_zero_resource(dev, i, policy))
+				continue;
+			if (idx == PCI_ROM_RESOURCE)
+				disabled = 1;
+			else if (r->flags & IORESOURCE_IO)
+				disabled = !(command & PCI_COMMAND_IO);
+			else
+				disabled = !(command & PCI_COMMAND_MEMORY);
+			if (pass == disabled) {
+				dev_dbg(&dev->dev,
+					"BAR %d: reserving %pr (d=%d, p=%d)\n",
+					idx, r, disabled, pass);
+				if (pci_claim_resource(dev, idx) < 0) {
+					if (r->flags & IORESOURCE_PCI_FIXED) {
+						dev_info(&dev->dev, "BAR %d %pR is immovable\n",
+							 idx, r);
+					} else {
+						/* We'll assign a new address later */
+						r->end -= r->start;
+						r->start = 0;
+					}
+				}
+			}
+		}
 }
 
 static void pci_claim_bridge_resources(struct pci_dev *dev, enum pci_rsrc_policy policy)
@@ -1415,17 +1447,18 @@ static void pci_claim_bridge_resources(struct pci_dev *dev, enum pci_rsrc_policy
 	}
 }
 
-static void pci_bus_allocate_dev_resources(struct pci_bus *b, enum pci_rsrc_policy policy)
+static void pci_bus_allocate_dev_resources(struct pci_bus *b, int pass,
+					   enum pci_rsrc_policy policy)
 {
 	struct pci_dev *dev;
 	struct pci_bus *child;
 
 	list_for_each_entry(dev, &b->devices, bus_list) {
-		pci_claim_device_resources(dev, policy);
+		pci_claim_device_resources(dev, pass, policy);
 
 		child = dev->subordinate;
 		if (child)
-			pci_bus_allocate_dev_resources(child, policy);
+			pci_bus_allocate_dev_resources(child, pass, policy);
 	}
 }
 
@@ -2185,7 +2218,8 @@ void pci_host_resource_survey(struct pci_bus *bus, enum pci_rsrc_policy policy)
 	/* Claim existing resources if required */
 	if (policy < pci_rsrc_assign_only) {
 		pci_bus_allocate_resources(bus, policy);
-		pci_bus_allocate_dev_resources(bus, policy);
+		pci_bus_allocate_dev_resources(bus, 0, policy);
+		pci_bus_allocate_dev_resources(bus, 1, policy);
 	}
 
 	/*
