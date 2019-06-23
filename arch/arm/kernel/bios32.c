@@ -522,6 +522,19 @@ static void pcibios_init_hw(struct device *parent, struct hw_pci *hw,
 	}
 }
 
+/*
+ * Set global PCI policy for both old-style (hw_pci based) platforms
+ * and new-style (drivers/pci/controller DT based) platforms.
+ */
+static int pci_init_policy(void)
+{
+	/* By default, all arm platforms reassign all PCI resources */
+	pci_set_flags(PCI_REASSIGN_ALL_RSRC);
+
+	return 0;
+}
+arch_initcall(pci_init_policy);
+
 void pci_common_init_dev(struct device *parent, struct hw_pci *hw)
 {
 	struct pci_sys_data *sys;
