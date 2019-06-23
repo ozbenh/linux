@@ -2169,3 +2169,40 @@ void pci_assign_unassigned_bus_resources(struct pci_bus *bus)
 	BUG_ON(!list_empty(&add_list));
 }
 EXPORT_SYMBOL_GPL(pci_assign_unassigned_bus_resources);
+
+void pci_host_resource_survey(struct pci_bus *bus, enum pci_rsrc_policy policy)
+{
+	/* Handle default policy */
+	if (policy == pci_rsrc_default) {
+		if (pci_has_flag(PCI_PROBE_ONLY))
+			policy = pci_rsrc_claim_only;
+		else if (pci_has_flag(PCI_REASSIGN_ALL_RSRC))
+			policy = pci_rsrc_assign_only;
+		else
+			policy = pci_rsrc_claim_assign;
+	}
+
+	/* Claim existing resources if required */
+	if (policy < pci_rsrc_assign_only)
+		pci_bus_claim_resources(bus);
+
+	/*
+	 * If we do a full reassignment, directly call these as to avoid
+	 * the realloc path which would otherwise bring completely meaningless
+	 * warning and messages if things go wrong
+	 */
+	if (policy == pci_rsrc_assign_only) {
+		pci_bus_size_bridges(bus);
+		pci_bus_assign_resources(bus);
+	} else if (policy == pci_rsrc_claim_assign)
+		pci_assign_unassigned_root_bus_resources(bus);
+
+	/* Handle PCIe settings */
+	if (policy > pci_rsrc_claim_only) {
+		struct pci_bus *child;
+
+		list_for_each_entry(child, &bus->children, node)
+			pcie_bus_configure_settings(child);
+	}
+}
+EXPORT_SYMBOL(pci_host_resource_survey);

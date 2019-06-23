@@ -486,6 +486,48 @@ static inline int pci_channel_offline(struct pci_dev *pdev)
 	return (pdev->error_state != pci_channel_io_normal);
 }
 
+/*
+ * PCI resource allocation policies:
+ *
+ * We currently support 3 policies which cover the requirements of all
+ * existing platforms. This currently only affects memory and IO resources
+ * and MPS/MRSS settings. Bus number sare handled separately (for now).
+ *
+ * We also have a "default" policy which will pickup an appropriate policy
+ * based on global PCI flags.
+ */
+enum pci_rsrc_policy {
+	/*
+	 * Default policy, based on these flags in that priority order:
+	 *
+	 *   PCI_PROBE_ONLY	   : pci_rsrc_claim_only
+	 *   PCI_REASSIGN_ALL_RSRC : pci_rsrc_assign_only
+	 *   otherwise		   : pci_rsrc_claim_assign
+	 */
+	pci_rsrc_default,
+
+	/*
+	 * Claim existing resources setup by firmware only, do not change them
+	 * nor assign unassigned devices. MPS/MRSS settings are unchanged.
+	 */
+	pci_rsrc_claim_only,
+
+	/*
+	 * Claim existing resources setup by firmware, assign unassigned ones.
+	 * This might also reallocate resources as needed based on the selected
+	 * reallocation strategy (CONFIG_PCI_REALLOC_ENABLE_AUTO, pci=realloc=*).
+	 * This will also honor _DSM #5 on ACPI platforms whenever possible.
+	 *
+	 * MPS/MRSS settings are updated
+	 */
+	pci_rsrc_claim_assign,
+
+	/* Ignore existing firmware configuration and reassign everything */
+	pci_rsrc_assign_only,
+};
+
+extern void pci_host_resource_survey(struct pci_bus *bus, enum pci_rsrc_policy policy);
+
 struct pci_host_bridge {
 	struct device	dev;
 	struct pci_bus	*bus;		/* Root bus */
