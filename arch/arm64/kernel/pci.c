@@ -222,3 +222,21 @@ void pcibios_remove_bus(struct pci_bus *bus)
 }
 
 #endif
+
+/* Set global PCI default policy for DT based platforms */
+static int pci_init_policy(void)
+{
+#ifdef CONFIG_ACPI
+	/* Not applicable to ACPI platforms, those will apply apply their
+	 * policy explicitly
+	 */
+	if (!acpi_disabled)
+		return;
+#endif
+
+	/* By default, all arm64 DT platforms reassign all PCI resources */
+	pci_set_flags(PCI_REASSIGN_ALL_RSRC);
+
+	return 0;
+}
+arch_initcall(pci_init_policy);
