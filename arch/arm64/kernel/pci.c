@@ -218,3 +218,13 @@ void pcibios_remove_bus(struct pci_bus *bus)
 }
 
 #endif
+
+/* Set global PCI default policy */
+static int pci_init_policy(void)
+{
+	/* By default, all arm64 platforms reassign all PCI resources */
+	pci_set_flags(PCI_REASSIGN_ALL_RSRC);
+
+	return 0;
+}
+arch_initcall(pci_init_policy);
