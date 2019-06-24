@@ -1453,13 +1453,6 @@ static void pci_bus_allocate_resources(struct pci_bus *b)
 		pci_bus_allocate_resources(child);
 }
 
-void pci_bus_claim_resources(struct pci_bus *b)
-{
-	pci_bus_allocate_resources(b);
-	pci_bus_allocate_dev_resources(b);
-}
-EXPORT_SYMBOL(pci_bus_claim_resources);
-
 static void __pci_bridge_assign_resources(const struct pci_dev *bridge,
 					  struct list_head *add_head,
 					  struct list_head *fail_head)
@@ -2190,8 +2183,10 @@ void pci_host_resource_survey(struct pci_bus *bus)
 	down_read(&pci_bus_sem);
 
 	/* Claim existing resources if required */
-	if (host->rsrc_policy <= pci_rsrc_claim_assign)
-		pci_bus_claim_resources(bus);
+	if (host->rsrc_policy <= pci_rsrc_claim_assign) {
+		pci_bus_allocate_resources(bus);
+		pci_bus_allocate_dev_resources(bus);
+	}
 
 	/* If we do any kind of assignment, do it now */
 	if (host->rsrc_policy >= pci_rsrc_claim_assign_restricted) {
