@@ -1523,7 +1523,7 @@ static int create_root_hv_pci_bus(struct hv_pcibus_device *hbus)
 
 	pci_lock_rescan_remove();
 	pci_scan_child_bus(hbus->pci_bus);
-	pci_bus_assign_resources(hbus->pci_bus);
+	pci_assign_unassigned_root_bus_resources(hbus->pci_bus);
 	hv_pci_assign_slots(hbus);
 	pci_bus_add_devices(hbus->pci_bus);
 	pci_unlock_rescan_remove();
