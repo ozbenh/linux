@@ -579,7 +579,7 @@ static int faraday_pci_probe(struct platform_device *pdev)
 	p->bus->max_bus_speed = max_bus_speed;
 	p->bus->cur_bus_speed = cur_bus_speed;
 
-	pci_bus_assign_resources(p->bus);
+	pci_host_resource_survey(p->bus);
 	pci_bus_add_devices(p->bus);
 	pci_free_resource_list(&res);
 
