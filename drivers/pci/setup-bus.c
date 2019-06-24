@@ -2169,3 +2169,24 @@ void pci_assign_unassigned_bus_resources(struct pci_bus *bus)
 	BUG_ON(!list_empty(&add_list));
 }
 EXPORT_SYMBOL_GPL(pci_assign_unassigned_bus_resources);
+
+void pci_host_resource_survey(struct pci_bus *bus)
+{
+	struct pci_host_bridge *host = pci_find_host_bridge(bus);
+
+	/* Claim existing resources if required */
+	if (host->rsrc_policy <= pci_rsrc_claim_assign)
+		pci_bus_claim_resources(bus);
+
+	/* If we do any kind of assignment, do it now */
+	if (host->rsrc_policy >= pci_rsrc_claim_assign_restricted) {
+		struct pci_bus *child;
+
+		pci_assign_unassigned_root_bus_resources(bus);
+
+		/* Handle PCIe settings */
+		list_for_each_entry(child, &bus->children, node)
+			pcie_bus_configure_settings(child);
+	}
+}
+EXPORT_SYMBOL(pci_host_resource_survey);
