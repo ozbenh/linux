@@ -2174,6 +2174,8 @@ void pci_host_resource_survey(struct pci_bus *bus)
 {
 	struct pci_host_bridge *host = pci_find_host_bridge(bus);
 
+	down_read(&pci_bus_sem);
+
 	/* Claim existing resources if required */
 	if (host->rsrc_policy <= pci_rsrc_claim_assign)
 		pci_bus_claim_resources(bus);
@@ -2188,5 +2190,7 @@ void pci_host_resource_survey(struct pci_bus *bus)
 		list_for_each_entry(child, &bus->children, node)
 			pcie_bus_configure_settings(child);
 	}
+
+	up_read(&pci_bus_sem);
 }
 EXPORT_SYMBOL(pci_host_resource_survey);
