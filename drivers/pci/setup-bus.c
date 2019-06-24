@@ -1332,6 +1332,19 @@ static void pdev_assign_fixed_resources(struct pci_dev *dev)
 	}
 }
 
+void pci_dev_assign_resources(struct pci_dev *dev)
+{
+	LIST_HEAD(head);
+
+	/* Assign non-fixed resources */
+	__dev_sort_resources(dev, &head);
+	__assign_resources_sorted(&head, NULL, NULL);
+
+	/* Assign fixed ones if any */
+	pdev_assign_fixed_resources(dev);
+}
+EXPORT_SYMBOL(pci_dev_assign_resources);
+
 void __pci_bus_assign_resources(const struct pci_bus *bus,
 				struct list_head *realloc_head,
 				struct list_head *fail_head)
