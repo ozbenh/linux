@@ -939,7 +939,7 @@ static int v3_pci_probe(struct platform_device *pdev)
 	}
 	v3->bus = host->bus;
 
-	pci_bus_assign_resources(v3->bus);
+	pci_host_resource_survey(v3->bus);
 	pci_bus_add_devices(v3->bus);
 
 	return 0;
