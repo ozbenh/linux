@@ -608,7 +608,6 @@ static int xgene_pcie_probe(struct platform_device *pdev)
 	struct device_node *dn = dev->of_node;
 	struct xgene_pcie_port *port;
 	resource_size_t iobase = 0;
-	struct pci_bus *bus, *child;
 	struct pci_host_bridge *bridge;
 	int ret;
 	LIST_HEAD(res);
@@ -659,12 +658,8 @@ static int xgene_pcie_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto error;
 
-	bus = bridge->bus;
-
-	pci_assign_unassigned_bus_resources(bus);
-	list_for_each_entry(child, &bus->children, node)
-		pcie_bus_configure_settings(child);
-	pci_bus_add_devices(bus);
+	pci_host_resource_survey(bridge->bus);
+	pci_bus_add_devices(bridge->bus);
 	return 0;
 
 error:
