@@ -807,8 +807,6 @@ static int altera_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct altera_pcie *pcie;
-	struct pci_bus *bus;
-	struct pci_bus *child;
 	struct pci_host_bridge *bridge;
 	int ret;
 	const struct of_device_id *match;
@@ -865,15 +863,8 @@ static int altera_pcie_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	bus = bridge->bus;
-
-	pci_assign_unassigned_bus_resources(bus);
-
-	/* Configure PCI Express setting. */
-	list_for_each_entry(child, &bus->children, node)
-		pcie_bus_configure_settings(child);
-
-	pci_bus_add_devices(bus);
+	pci_host_resource_survey(bridge->bus);
+	pci_bus_add_devices(bridge->bus);
 	return ret;
 }
 
