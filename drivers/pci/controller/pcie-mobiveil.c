@@ -849,8 +849,6 @@ static int mobiveil_pcie_init_irq_domain(struct mobiveil_pcie *pcie)
 static int mobiveil_pcie_probe(struct platform_device *pdev)
 {
 	struct mobiveil_pcie *pcie;
-	struct pci_bus *bus;
-	struct pci_bus *child;
 	struct pci_host_bridge *bridge;
 	struct device *dev = &pdev->dev;
 	resource_size_t iobase;
@@ -924,13 +922,8 @@ static int mobiveil_pcie_probe(struct platform_device *pdev)
 	if (ret)
 		goto error;
 
-	bus = bridge->bus;
-
-	pci_assign_unassigned_bus_resources(bus);
-	list_for_each_entry(child, &bus->children, node)
-		pcie_bus_configure_settings(child);
-	pci_bus_add_devices(bus);
-
+	pci_host_resource_survey(bridge->bus);
+	pci_bus_add_devices(bridge->bus);
 	return 0;
 error:
 	pci_free_resource_list(&pcie->resources);
