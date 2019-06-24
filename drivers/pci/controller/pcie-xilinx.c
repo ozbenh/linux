@@ -616,7 +616,6 @@ static int xilinx_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct xilinx_pcie_port *port;
-	struct pci_bus *bus, *child;
 	struct pci_host_bridge *bridge;
 	int err;
 	resource_size_t iobase = 0;
@@ -675,12 +674,8 @@ static int xilinx_pcie_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto error;
 
-	bus = bridge->bus;
-
-	pci_assign_unassigned_bus_resources(bus);
-	list_for_each_entry(child, &bus->children, node)
-		pcie_bus_configure_settings(child);
-	pci_bus_add_devices(bus);
+	pci_host_resource_survey(bridge->bus);
+	pci_bus_add_devices(bridge->bus);
 	return 0;
 
 error:
