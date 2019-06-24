@@ -731,7 +731,7 @@ static void asus_rfkill_hotplug(struct asus_wmi *asus)
 			}
 			dev = pci_scan_single_device(bus, 0);
 			if (dev) {
-				pci_bus_assign_resources(bus);
+				pci_dev_assign_resources(dev);
 				pci_bus_add_device(dev);
 			}
 		} else {
