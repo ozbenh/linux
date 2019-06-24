@@ -613,7 +613,7 @@ static void eeepc_rfkill_hotplug(struct eeepc_laptop *eeepc, acpi_handle handle)
 		}
 		dev = pci_scan_single_device(bus, 0);
 		if (dev) {
-			pci_bus_assign_resources(bus);
+			pci_dev_assign_resources(dev);
 			pci_bus_add_device(dev);
 		}
 	} else {
