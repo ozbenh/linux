@@ -1291,12 +1291,6 @@ void __pci_bus_size_bridges(struct pci_bus *bus, struct list_head *realloc_head)
 	}
 }
 
-void pci_bus_size_bridges(struct pci_bus *bus)
-{
-	__pci_bus_size_bridges(bus, NULL);
-}
-EXPORT_SYMBOL(pci_bus_size_bridges);
-
 static void assign_fixed_resource_on_bus(struct pci_bus *b, struct resource *r)
 {
 	int i;
