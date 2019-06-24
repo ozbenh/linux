@@ -1381,12 +1381,6 @@ void __pci_bus_assign_resources(const struct pci_bus *bus,
 	}
 }
 
-void pci_bus_assign_resources(const struct pci_bus *bus)
-{
-	__pci_bus_assign_resources(bus, NULL, NULL);
-}
-EXPORT_SYMBOL(pci_bus_assign_resources);
-
 /* Should we claim a resource whose r->start is 0 ? */
 bool __weak pcibios_claim_zero_resource(struct pci_dev *dev, int rsrc_idx)
 {
