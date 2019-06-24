@@ -601,6 +601,17 @@ static void pci_init_host_bridge(struct pci_host_bridge *bridge)
 	bridge->native_shpc_hotplug = 1;
 	bridge->native_pme = 1;
 	bridge->native_ltr = 1;
+
+	/*
+	 * Establish a default resource management policy based on global
+	 * PCI flags
+	 */
+	if (pci_has_flag(PCI_PROBE_ONLY))
+		bridge->rsrc_policy = pci_rsrc_claim_only;
+	else if (pci_has_flag(PCI_REASSIGN_ALL_RSRC))
+		bridge->rsrc_policy = pci_rsrc_assign_only;
+	else
+		bridge->rsrc_policy = pci_rsrc_claim_assign;
 }
 
 struct pci_host_bridge *pci_alloc_host_bridge(size_t priv)

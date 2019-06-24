@@ -192,7 +192,7 @@ struct pci_bus *pci_acpi_scan_root(struct acpi_pci_root *root)
 
 	/* If we must preserve the resource configuration, claim now */
 	host = pci_find_host_bridge(bus);
-	if (host->preserve_config)
+	if (host->rsrc_policy <= pci_rsrc_claim_assign)
 		pci_bus_claim_resources(bus);
 
 	/*

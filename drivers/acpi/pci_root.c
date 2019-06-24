@@ -925,8 +925,9 @@ struct pci_bus *acpi_pci_root_create(struct acpi_pci_root *root,
 	 */
 	obj = acpi_evaluate_dsm(ACPI_HANDLE(bus->bridge), &pci_acpi_dsm_guid, 1,
 	                        IGNORE_PCI_BOOT_CONFIG_DSM, NULL);
-	if (obj && obj->type == ACPI_TYPE_INTEGER && obj->integer.value == 0)
-		host_bridge->preserve_config = 1;
+	if (obj && obj->type == ACPI_TYPE_INTEGER && obj->integer.value == 0 &&
+	    host_bridge->rsrc_policy == pci_rsrc_claim_assign)
+		host_bridge->rsrc_policy = pci_rsrc_claim_assign_restricted;
 	ACPI_FREE(obj);
 
 	pci_scan_child_bus(bus);

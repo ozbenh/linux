@@ -489,6 +489,42 @@ static inline int pci_channel_offline(struct pci_dev *pdev)
 	return (pdev->error_state != pci_channel_io_normal);
 }
 
+/*
+ * PCI resource allocation policies:
+ *
+ * We currently support 4 policies which cover the requirements of all
+ * existing platforms. This currently only affects memory and IO resources
+ * and MPS/MRSS settings. Bus number sare handled separately (for now).
+ */
+enum pci_rsrc_policy {
+	/*
+	 * Claim existing resources setup by firmware only, do not change them
+	 * nor assign unassigned devices. MPS/MRSS settings are unchanged.
+	 */
+	pci_rsrc_claim_only,
+
+	/*
+	 * Claim existing resources setup by firmware, assign unassigned ones.
+	 * This will mightwil not reallocate resources automatically unless
+	 * pci=realloc=on is set explicitly.
+	 *
+	 * MPS/MRSS settings are updated
+	 */
+	pci_rsrc_claim_assign_restricted,
+
+	/*
+	 * Claim existing resources setup by firmware, assign unassigned ones.
+	 * This might also reallocate resources as needed based on the selected
+	 * reallocation strategy if CONFIG_PCI_REALLOC_ENABLE_AUTO is set.
+	 *
+	 * MPS/MRSS settings are updated
+	 */
+	pci_rsrc_claim_assign,
+
+	/* Ignore existing firmware configuration and reassign everything */
+	pci_rsrc_assign_only,
+};
+
 struct pci_host_bridge {
 	struct device	dev;
 	struct pci_bus	*bus;		/* Root bus */
@@ -509,7 +545,9 @@ struct pci_host_bridge {
 	unsigned int	native_shpc_hotplug:1;	/* OS may use SHPC hotplug */
 	unsigned int	native_pme:1;		/* OS may use PCIe PME */
 	unsigned int	native_ltr:1;		/* OS may use PCIe LTR */
-	unsigned int	preserve_config:1;	/* Preserve FW resource setup */
+
+	/* Resource claim/assignment policy */
+	enum pci_rsrc_policy rsrc_policy;
 
 	/* Resource alignment requirements */
 	resource_size_t (*align_resource)(struct pci_dev *dev,

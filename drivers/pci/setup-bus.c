@@ -1690,7 +1690,7 @@ static enum enable_type pci_realloc_detect(struct pci_bus *bus,
 		return enable_local;
 
 	host = pci_find_host_bridge(bus);
-	if (host->preserve_config)
+	if (host->rsrc_policy <= pci_rsrc_claim_assign_restricted)
 		return auto_disabled;
 
 	pci_walk_bus(bus, iov_resources_unassigned, &unassigned);
