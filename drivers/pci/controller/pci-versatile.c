@@ -118,7 +118,6 @@ static int versatile_pci_probe(struct platform_device *pdev)
 	int ret, i, myslot = -1;
 	u32 val;
 	void __iomem *local_pci_cfg_base;
-	struct pci_bus *bus, *child;
 	struct pci_host_bridge *bridge;
 	LIST_HEAD(pci_res);
 
@@ -209,12 +208,8 @@ static int versatile_pci_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	bus = bridge->bus;
-
-	pci_assign_unassigned_bus_resources(bus);
-	list_for_each_entry(child, &bus->children, node)
-		pcie_bus_configure_settings(child);
-	pci_bus_add_devices(bus);
+	pci_host_resource_survey(bridge->bus);
+	pci_bus_add_devices(bridge->bus);
 
 	return 0;
 }
