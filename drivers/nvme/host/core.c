@@ -1196,6 +1196,8 @@ static void nvme_enable_aen(struct nvme_ctrl *ctrl)
 	if (!supported_aens)
 		return;
 
+	queue_work(nvme_wq, &ctrl->async_event_work);
+
 	status = nvme_set_features(ctrl, NVME_FEAT_ASYNC_EVENT, supported_aens,
 			NULL, 0, &result);
 	if (status)
@@ -3764,10 +3766,13 @@ void nvme_start_ctrl(struct nvme_ctrl *ctrl)
 	if (ctrl->kato)
 		nvme_start_keep_alive(ctrl);
 
+	if (ctrl->queue_count > 1 ||
+	    (ctrl->ops->flags & NVME_F_FABRICS &&
+	     ctrl->opts->discovery_nqn))
+		nvme_enable_aen(ctrl);
+
 	if (ctrl->queue_count > 1) {
 		nvme_queue_scan(ctrl);
-		nvme_enable_aen(ctrl);
-		queue_work(nvme_wq, &ctrl->async_event_work);
 		nvme_start_queues(ctrl);
 	}
 }
