@@ -28,7 +28,7 @@
 // example:
 // if (!litex_check_accessors())
 //     return -EPROBE_DEFER;
-int litex_check_accessors(void);
+//int litex_check_accessors(void);
 
 static inline ulong _readu_cpu(const volatile void __iomem *addr)
 {

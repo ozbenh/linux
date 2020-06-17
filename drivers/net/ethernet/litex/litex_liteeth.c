@@ -261,8 +261,8 @@ static int liteeth_probe(struct platform_device *pdev)
 	int irq, err;
 
 	/* defer probe if litex.h accessors are not ready */
-	if (!litex_check_accessors())
-		return -EPROBE_DEFER;
+//	if (!litex_check_accessors())
+//		return -EPROBE_DEFER;
 
 	netdev = alloc_etherdev(sizeof(*priv));
 	if (!netdev)
