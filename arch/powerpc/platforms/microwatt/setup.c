@@ -10,10 +10,12 @@
 #include <linux/init.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+
 #include <asm/machdep.h>
 #include <asm/udbg.h>
 #include <asm/reg.h>
 #include <asm/time.h>
+#include <asm/xics.h>
 
 static u64 potato_uart_base;
 
@@ -132,6 +134,7 @@ static void __init microwatt_setup_arch(void)
 
 static void __init microwatt_init_IRQ(void)
 {
+	xics_init();
 }
 
 static int __init microwatt_probe(void)
